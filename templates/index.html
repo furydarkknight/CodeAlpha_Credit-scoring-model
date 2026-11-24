@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credit Risk & Default Prediction System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20width=%22100%22%20height=%22100%22><text y=%22.9em%22 font-size=%2290%22>💳</text></svg>">
+</head>
+<body>
+  <!-- Header / Nav -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <span class="brand-icon">💳</span>
+        <div>
+          <h1>Credit Scoring System</h1>
+          <p class="subtitle">AI Underwriting & Default Probability Engine</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <span class="badge champion-badge">🏆 Champion: Random Forest (AUC 0.867)</span>
+        <button id="themeToggle" class="btn-icon" aria-label="Toggle Theme">
+          <span id="themeIcon">🌙</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Top Grid: Form & Result Card -->
+    <div class="scoring-grid">
+      <!-- Left Column: Input Form -->
+      <section class="card form-card">
+        <div class="card-header">
+          <h2>Applicant Financial Profile</h2>
+          <div class="preset-buttons">
+            <button type="button" id="btnLowRisk" class="btn btn-sm btn-outline-success">
+              ✓ Low-Risk Example
+            </button>
+            <button type="button" id="btnHighRisk" class="btn btn-sm btn-outline-danger">
+              ⚠ High-Risk Example
+            </button>
+          </div>
+        </div>
+
+        <form id="scoringForm" novalidate>
+          <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
+
+          <!-- Section 1: Demographics & Income -->
+          <fieldset class="form-section">
+            <legend>👤 Personal & Household Liquidity</legend>
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="age">Age <span class="required">*</span></label>
+                <input type="number" id="age" name="age" min="18" max="110" value="45" required>
+                <small class="helper-text">Legal adult age (18 - 110 years).</small>
+              </div>
+
+              <div class="form-group">
+                <label for="MonthlyIncome">Monthly Gross Income ($)</label>
+                <input type="number" id="MonthlyIncome" name="MonthlyIncome" min="0" step="100" placeholder="e.g. 7500">
+                <small class="helper-text">Leave blank if unverified / gig income.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="NumberOfDependents">Number of Dependents</label>
+                <input type="number" id="NumberOfDependents" name="NumberOfDependents" min="0" max="20" value="1">
+                <small class="helper-text">Family dependents excluding borrower.</small>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Section 2: Leverage & Credit Lines -->
+          <fieldset class="form-section">
+            <legend>📊 Credit Utilization & Leverage</legend>
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="RevolvingUtilizationOfUnsecuredLines">
+                  Revolving Credit Utilization <span class="required">*</span>
+                </label>
+                <input type="number" id="RevolvingUtilizationOfUnsecuredLines" name="RevolvingUtilizationOfUnsecuredLines" min="0" max="10" step="0.01" value="0.15" required>
+                <small class="helper-text">Balances ÷ Total Limits (0.15 = 15%, 1.0+ = maxed out).</small>
+              </div>
+
+              <div class="form-group">
+                <label for="DebtRatio">Debt-to-Income Ratio <span class="required">*</span></label>
+                <input type="number" id="DebtRatio" name="DebtRatio" min="0" max="50" step="0.01" value="0.25" required>
+                <small class="helper-text">Monthly debts ÷ Gross income (0.35 = 35%).</small>
+              </div>
+
+              <div class="form-group">
+                <label for="NumberOfOpenCreditLinesAndLoans">Open Credit Lines & Loans</label>
+                <input type="number" id="NumberOfOpenCreditLinesAndLoans" name="NumberOfOpenCreditLinesAndLoans" min="0" max="100" value="8">
+                <small class="helper-text">Total open installment, auto & credit lines.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="NumberRealEstateLoansOrLines">Real Estate & Mortgages</label>
+                <input type="number" id="NumberRealEstateLoansOrLines" name="NumberRealEstateLoansOrLines" min="0" max="50" value="1">
+                <small class="helper-text">Active mortgages or home equity loans.</small>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Section 3: Payment History -->
+          <fieldset class="form-section">
+            <legend>⏱ Payment History & Past Delinquencies (Past 2 Years)</legend>
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="NumberOfTime30-59DaysPastDueNotWorse">30–59 Days Past Due</label>
+                <input type="number" id="NumberOfTime30-59DaysPastDueNotWorse" name="NumberOfTime30-59DaysPastDueNotWorse" min="0" max="50" value="0">
+                <small class="helper-text">Minor late payment incidents.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="NumberOfTime60-89DaysPastDueNotWorse">60–89 Days Past Due</label>
+                <input type="number" id="NumberOfTime60-89DaysPastDueNotWorse" name="NumberOfTime60-89DaysPastDueNotWorse" min="0" max="50" value="0">
+                <small class="helper-text">Moderate late payment incidents.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="NumberOfTimes90DaysLate">90+ Days Severe Defaults</label>
+                <input type="number" id="NumberOfTimes90DaysLate" name="NumberOfTimes90DaysLate" min="0" max="50" value="0">
+                <small class="helper-text">Severe defaults (charge-off indicators).</small>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="submit" id="btnSubmit" class="btn btn-primary btn-block">
+              <span id="btnText">Evaluate Creditworthiness</span>
+              <span id="btnSpinner" class="spinner d-none"></span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Interactive Results Card -->
+      <section class="card result-card">
+        <div class="card-header">
+          <h2>Underwriting Decision</h2>
+          <span id="statusBadge" class="status-badge badge-neutral">Awaiting Evaluation</span>
+        </div>
+
+        <div id="resultsContent" class="results-content">
+          <!-- Gauge Visual -->
+          <div class="gauge-wrapper">
+            <svg class="score-gauge" viewBox="0 0 200 120">
+              <path class="gauge-bg" d="M 20 100 A 80 80 0 0 1 180 100" />
+              <path id="gaugeMeter" class="gauge-meter" d="M 20 100 A 80 80 0 0 1 180 100" />
+            </svg>
+            <div class="gauge-value">
+              <span id="scoreValue" class="score-number">---</span>
+              <span class="score-scale">FICO Proxy (300 - 850)</span>
+            </div>
+          </div>
+
+          <!-- Key Metrics Badges -->
+          <div class="result-metrics">
+            <div class="metric-box">
+              <span class="metric-label">Probability of Default</span>
+              <span id="pdValue" class="metric-val">--%</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">Risk Category</span>
+              <span id="tierValue" class="metric-val">--</span>
+            </div>
+          </div>
+
+          <!-- Recommendation Banner -->
+          <div id="decisionBanner" class="decision-banner banner-neutral">
+            <div class="decision-title">Recommended Action</div>
+            <div id="decisionText" class="decision-detail">Submit an applicant profile on the left to generate an underwriting decision.</div>
+          </div>
+
+          <!-- Regulatory Adverse Action Factors -->
+          <div class="factors-section">
+            <h3>Key Lending Risk Drivers</h3>
+            <ul id="factorsList" class="factors-list">
+              <li>No applicant evaluated yet.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom Section: Model Performance & Benchmark Gallery -->
+    <section class="card performance-card">
+      <div class="card-header">
+        <h2>Model Governance & Benchmark Validation</h2>
+        <span class="badge badge-info">Held-Out Test Set (30,000 Applicants)</span>
+      </div>
+
+      <!-- Metrics Table -->
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Model Candidate</th>
+              <th>Accuracy</th>
+              <th>Precision</th>
+              <th>Recall (Default Detection)</th>
+              <th>F1-Score</th>
+              <th>ROC-AUC</th>
+              <th>PR-AUC</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in metrics %}
+            <tr class="{{ 'highlight-row' if 'Random Forest' in row.Model else '' }}">
+              <td>
+                <strong>{{ row.Model }}</strong>
+                {% if 'Random Forest' in row.Model %}
+                  <span class="badge badge-champion">Champion</span>
+                {% endif %}
+              </td>
+              <td>{{ "%.2f"|format(row.Accuracy * 100) }}%</td>
+              <td>{{ "%.4f"|format(row.Precision) }}</td>
+              <td>{{ "%.2f"|format(row.Recall * 100) }}%</td>
+              <td>{{ "%.4f"|format(row['F1-Score']) }}</td>
+              <td><strong>{{ "%.4f"|format(row['ROC-AUC']) }}</strong></td>
+              <td><strong>{{ "%.4f"|format(row['PR-AUC']) }}</strong></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7">Loading model benchmark metrics...</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Diagnostic Plots Grid -->
+      <h3 class="mt-4">Diagnostic Plots & Performance Curves</h3>
+      <div class="plots-grid">
+        <div class="plot-box">
+          <h4>Multi-Model ROC Curves</h4>
+          <img src="{{ url_for('static', filename='plots/roc_curves.png') }}" alt="ROC Curves Comparison" loading="lazy">
+          <p class="plot-caption">AUC = 0.8671: Demonstrates outstanding ranking discrimination across all cutoff levels.</p>
+        </div>
+
+        <div class="plot-box">
+          <h4>Precision-Recall Curves</h4>
+          <img src="{{ url_for('static', filename='plots/pr_curves.png') }}" alt="Precision-Recall Curves" loading="lazy">
+          <p class="plot-caption">PR-AUC = 0.4006: Over 6× better than the 6.68% baseline default frequency.</p>
+        </div>
+
+        <div class="plot-box">
+          <h4>Top 15 Risk Drivers</h4>
+          <img src="{{ url_for('static', filename='plots/feature_importances.png') }}" alt="Feature Importances" loading="lazy">
+          <p class="plot-caption">Revolving credit utilization and delinquency severity score drive over 60% of variance.</p>
+        </div>
+
+        <div class="plot-box">
+          <h4>Business Threshold Optimization</h4>
+          <img src="{{ url_for('static', filename='plots/threshold_tuning.png') }}" alt="Decision Threshold Tuning" loading="lazy">
+          <p class="plot-caption">Models asymmetric cost ($Cost_{FN} \approx 10 \times Cost_{FP}$) to minimize portfolio losses.</p>
+        </div>
+
+        <div class="plot-box">
+          <h4>Confusion Matrix (Random Forest)</h4>
+          <img src="{{ url_for('static', filename='plots/confusion_matrix_Random_Forest.png') }}" alt="Confusion Matrix" loading="lazy">
+          <p class="plot-caption">Evaluated on 30,000 independent held-out applicants never seen during training.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Disclaimer & Footer -->
+    <footer class="footer">
+      <div class="disclaimer">
+        ⚖️ <strong>Regulatory Disclaimer:</strong> Educational Machine Learning project built on the Kaggle "Give Me Some Credit" benchmark dataset. Not intended for actual commercial lending, credit granting, or underwriting decisions.
+      </div>
+      <p class="footer-links">
+        <span>Antigravity ML Engineering Project</span> • 
+        <a href="https://github.com/furydarkknight/CodeAlpha_Credit-scoring-model" target="_blank" rel="noopener">GitHub Repository</a>
+      </p>
+    </footer>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
